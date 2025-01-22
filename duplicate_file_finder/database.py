@@ -38,3 +38,10 @@ def backup_database(db_path):
         logger.info(f"Database backed up to {backup_path}")
     else:
         logger.info(f"No existing database found at {db_path}. Skipping backup.")
+
+def remove_mount_point_entries(conn, mount_point):
+    """Remove all entries for a given mount point from the database."""
+    c = conn.cursor()
+    c.execute("DELETE FROM files WHERE mount_point = ?", (mount_point,))
+    conn.commit()
+    return c.rowcount

@@ -2,6 +2,7 @@ import unittest
 import os
 import tempfile
 import sqlite3
+from pathlib import Path
 from duplicate_file_finder.database import create_database
 from duplicate_file_finder.scanner import (
     add_mount_points,
@@ -44,11 +45,11 @@ class TestRemove(unittest.TestCase):
     def tearDown(self):
         self.conn.close()
         # Clean up test files and directories
-        for mount_point in self.mount_points:
-            for root, _, files in os.walk(mount_point, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                os.rmdir(root)
+        for root, dirs, files in os.walk(self.test_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
         os.rmdir(self.test_dir)
@@ -125,6 +126,39 @@ class TestRemove(unittest.TestCase):
                         "Should have two files remaining from mount2")
         for mount_point, _, _, _ in remaining_files:
             self.assertEqual(mount_point, self.mount_points[1])
+
+    def test_remove_mount_point_with_relative_path(self):
+        """Test removing mount point that was added with relative path."""
+        # Save current working directory
+        original_cwd = os.getcwd()
+        try:
+            # Change to test directory
+            os.chdir(self.test_dir)
+
+            # Create new relative test directory
+            rel_test_dir = "./rel_mount"
+            os.makedirs(rel_test_dir)
+            test_file = Path(rel_test_dir) / "test.txt"
+            test_file.write_text("test content")
+
+            # Add mount point using relative path
+            add_mount_points(self.conn, [rel_test_dir])
+
+            # Verify file was added
+            c = self.conn.cursor()
+            c.execute("SELECT COUNT(*) FROM files WHERE mount_point LIKE '%rel_mount'")
+            assert c.fetchone()[0] == 1, "File should be in database after adding"
+
+            # Remove mount point using relative path
+            remove_mount_point(self.conn, rel_test_dir)
+
+            # Verify file was removed
+            c.execute("SELECT COUNT(*) FROM files WHERE mount_point LIKE '%rel_mount'")
+            count = c.fetchone()[0]
+            assert count == 0, f"Expected 0 files after removal, but found {count}"
+
+        finally:
+            os.chdir(original_cwd)
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,6 +3,7 @@ import json
 from tqdm import tqdm
 from .config import logger
 from .utils import process_files_in_batches
+from .database import remove_mount_point_entries
 
 def save_checkpoint(mount_point, last_processed_file):
     """Save scanning checkpoint."""
@@ -53,21 +54,34 @@ def add_mount_points(conn, mount_points):
     c = conn.cursor()
 
     for mount_point in mount_points:
-        if not os.path.exists(mount_point):
-            logger.warning(f"Mount point {mount_point} does not exist. Skipping.")
+        abs_mount_point = os.path.abspath(mount_point)
+        if not os.path.exists(abs_mount_point):
+            logger.warning(f"Mount point {abs_mount_point} does not exist. Skipping.")
             continue
 
-        files_info = scan_mount_point(mount_point)
+        files_info = scan_mount_point(abs_mount_point)
         for batch in process_files_in_batches(files_info):
             c.executemany("INSERT OR REPLACE INTO files (file_key, full_path, mount_point, file_size, last_modified) VALUES (?, ?, ?, ?, ?)", batch)
             conn.commit()
 
 def remove_mount_point(conn, mount_point):
-    """Remove a mount point from the database."""
+    """Remove a mount point and all its files from the database."""
+    abs_mount_point = os.path.abspath(mount_point)
+    mount_point_with_sep = os.path.join(abs_mount_point, '')  # Ensures trailing separator
     c = conn.cursor()
-    mount_point = os.path.abspath(mount_point)
-    c.execute("DELETE FROM files WHERE mount_point = ?", (mount_point,))
-    conn.commit()
+
+    # First get the count to make sure we have entries
+    c.execute("SELECT COUNT(*) FROM files WHERE mount_point = ? OR mount_point = ?",
+             (abs_mount_point, mount_point_with_sep))
+    count = c.fetchone()[0]
+
+    if count > 0:
+        # Remove entries that match either format of the mount point
+        c.execute("DELETE FROM files WHERE mount_point = ? OR mount_point = ?",
+                 (abs_mount_point, mount_point_with_sep))
+        conn.commit()
+        return count
+    return 0
 
 def update_mount_point(conn, mount_point):
     """Update a mount point in the database."""
