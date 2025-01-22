@@ -108,21 +108,8 @@ class TestCheck(unittest.TestCase):
         # Check if we have duplicates before analyzing
         self.assertGreater(len(duplicates), 0, "Should find duplicates to analyze")
 
-        # Create duplicate data structure expected by analyze_duplicates
-        duplicate_data = []
-        for row in duplicates:
-            # Print raw row data for debugging
-            print(f"Processing row: {row}")
-            file_key = row[0]
-            paths = row[1].split('; ')
-            sizes = [int(size) for size in row[2].split('; ')]
-            duplicate_data.append({
-                'file_key': file_key,
-                'paths': list(zip(paths, sizes))
-            })
-
         # Analyze duplicates
-        exact_duplicates, path_duplicates = analyze_duplicates(duplicate_data)
+        exact_duplicates, path_duplicates = analyze_duplicates(duplicates)
 
         # Debug: Print analyzed results
         print("\nExact duplicates:")
@@ -154,19 +141,7 @@ class TestCheck(unittest.TestCase):
     def test_duplicate_content_different_paths(self):
         """Test finding files with same content but different paths"""
         duplicates = find_duplicates(self.conn)
-
-        # Create duplicate data structure
-        duplicate_data = []
-        for row in duplicates:
-            file_key = row[0]
-            paths = row[1].split('; ')
-            sizes = [int(size) for size in row[2].split('; ')]
-            duplicate_data.append({
-                'file_key': file_key,
-                'paths': list(zip(paths, sizes))
-            })
-
-        exact_duplicates, _ = analyze_duplicates(duplicate_data)
+        exact_duplicates, _ = analyze_duplicates(duplicates)
 
         # Debug: Print all duplicates
         print("\nChecking for content duplicates with different paths:")
@@ -178,7 +153,8 @@ class TestCheck(unittest.TestCase):
         # Find duplicates with same content but different paths
         same_content_dups = []
         for dup_key, dup_paths in exact_duplicates:
-            if any('same_content' in path for path, _ in dup_paths):
+            paths = [path for path, _ in dup_paths]
+            if any('same_content' in path for path in paths):
                 same_content_dups.append((dup_key, dup_paths))
 
         self.assertEqual(len(same_content_dups), 0,

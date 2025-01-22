@@ -19,17 +19,21 @@ def analyze_duplicates(duplicates):
     path_duplicates = []
 
     for duplicate in duplicates:
-        file_key = duplicate['file_key']
-        paths_and_sizes = duplicate['paths']
+        file_key, paths_str, sizes_str, _ = duplicate
+        paths = paths_str.split('; ')
+        sizes = [int(size) for size in sizes_str.split('; ')]
 
+        # Calculate hashes for each file
         hashes = defaultdict(list)
-        for path, size in paths_and_sizes:
+        for path, size in zip(paths, sizes):
             file_hash = get_file_hash(path)
             if file_hash is not None:
                 hashes[file_hash].append((path, size))
 
+        # If all files have the same hash, they're exact duplicates
         if len(hashes) == 1:
             exact_duplicates.append((file_key, list(hashes.values())[0]))
+        # If files have different hashes, they're path duplicates
         elif len(hashes) > 1:
             path_duplicates.append((file_key, dict(hashes)))
 
