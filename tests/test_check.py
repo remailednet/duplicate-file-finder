@@ -2,11 +2,13 @@ import unittest
 import os
 import tempfile
 import sqlite3
-from duplicate_file_finder.dff import (
-    create_database,
-    add_mount_points,
+from duplicate_file_finder.database import create_database
+from duplicate_file_finder.scanner import add_mount_points
+from duplicate_file_finder.core import (
     find_duplicates,
-    analyze_duplicates
+    analyze_duplicates,
+    generate_delete_commands,
+    get_file_hash
 )
 
 class TestCheck(unittest.TestCase):

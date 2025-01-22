@@ -2,10 +2,9 @@ import unittest
 import os
 import tempfile
 import sqlite3
-from duplicate_file_finder.dff import (
-    create_database,
-    add_mount_points
-)
+from duplicate_file_finder.database import create_database
+from duplicate_file_finder.scanner import scan_mount_point, add_mount_points
+from duplicate_file_finder.utils import get_file_hash
 
 class TestAdd(unittest.TestCase):
     def setUp(self):

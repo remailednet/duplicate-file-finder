@@ -2,11 +2,20 @@ import unittest
 import os
 import tempfile
 import sqlite3
-from duplicate_file_finder.dff import (
-    create_database,
-    add_mount_points,
-    list_files
-)
+from duplicate_file_finder.database import create_database
+from duplicate_file_finder.scanner import add_mount_points
+from duplicate_file_finder.cli import list
+
+def list_files(conn, mount_point=None):
+    c = conn.cursor()
+    if mount_point:
+        c.execute('''SELECT mount_point, file_key, file_size, last_modified
+                     FROM files WHERE mount_point = ?
+                     ORDER BY mount_point, file_key''', (mount_point,))
+    else:
+        c.execute('''SELECT mount_point, file_key, file_size, last_modified
+                     FROM files ORDER BY mount_point, file_key''')
+    return c.fetchall()
 
 class TestList(unittest.TestCase):
     def setUp(self):

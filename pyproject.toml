@@ -7,6 +7,9 @@ name = "duplicate-file-finder"
 version = "0.1.0"
 description = "A tool to find duplicate files across different mount points"
 
+[project.scripts]
+dff = "duplicate_file_finder.cli:cli"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
